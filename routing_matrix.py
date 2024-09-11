@@ -1,22 +1,22 @@
 import requests 
 
 # distancematrix.ai API
-API_KEY = 'mxzxueQqOW1GUZRy658jDLLLDoRyCX1cMOSH2Tk76tP8OLagWu5b1NDbJ8hi8jwq'
+API_KEY = 'yourKey'
 
 def generate_matrix(locations, dimension='time'):
     '''
     Generates a time or distance matrix for a given set of locations using the Distance Matrix API (https://distancematrix.ai/distance-matrix-api)
 
     Parameters:
-    - locations (list of str): list of locations (either addresses or coordinates can be used)
-    - dimension (string): dimension of the matrix to generate:
+    - locations (list of str): List of locations (either addresses or coordinates can be used).
+    - dimension (string): Dimension of the matrix to generate:
         - 'time' (default): generates a matrix of travel values (in minutes)
         - 'distance': generates a matrix of distances (in kilometers)
 
     Returns:
-    - Matrix of values or distances between each pair of locations
-        - If a route is not found '-1' is used as a placeholder
-        - If an error occurs in the API response '-1000' is used as a placeholder
+    - Matrix (list of list of int) of values or distances between each pair of locations.
+        - If a route is not found '-1' is used as a placeholder.
+        - If an error occurs in the API response '-1000' is used as a placeholder.
 
     '''
 
@@ -28,9 +28,11 @@ def generate_matrix(locations, dimension='time'):
     url = f'https://api.distancematrix.ai/maps/api/distancematrix/json?origins={origins}&destinations={destinations}&key={API_KEY}'
     # Response
     response = requests.get(url)
+    data = response.json()
 
-    if response.status_code == 200:
-        data = response.json()
+    if data['status'] == 'OK':
+
+        print(data)
 
         matrix = []
 
@@ -51,11 +53,9 @@ def generate_matrix(locations, dimension='time'):
         return matrix
 
     else: # If there's an error when trying to connect with the API
-        print(f'ERROR: received response status {response.status_code}')
+        print(f'ERROR: received response status {data['status']}')
 
 def print_matrix(matrix):
-    '''
-    Prints the given matrix
-    '''
+    '''Prints the given matrix'''
     for row in matrix:
         print(row)
