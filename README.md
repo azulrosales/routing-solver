@@ -1,6 +1,6 @@
 # VRP Solver
 
-This program solves the Vehicle Routing Problem (VRP) with breaks and varying start and end points for vehicles.
+This program solves the Vehicle Routing Problem (VRP) with breaks and varying start and/or end points for vehicles.
 
 ## Overview
 
@@ -14,8 +14,8 @@ The VRP solver can handle scenarios where vehicles have specific starting and en
 
 ## Tools Used
 
-- **Google OR-Tools:** For solving the VRP with constraints and breaks.
-- **Distancematrix.ai's Distance Matrix API:** To generate the time matrix required for the solver.
+- **Google OR-Tools:** For solving the VRP (https://developers.google.com/optimization/routing).
+- **Distancematrix.ai's Distance Matrix API:** To generate the time matrix required for the solver (https://distancematrix.ai/distance-matrix-api).
 
 ## Files
 
