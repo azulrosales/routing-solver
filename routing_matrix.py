@@ -3,59 +3,85 @@ import requests
 # distancematrix.ai API
 API_KEY = 'yourKey'
 
+import requests
+
 def generate_matrix(locations, dimension='time'):
     '''
-    Generates a time or distance matrix for a given set of locations using the Distance Matrix API (https://distancematrix.ai/distance-matrix-api)
+    Generates a time or distance matrix for a given set of locations using the Distance Matrix API.
 
-    Parameters:
-    - locations (list of str): List of locations (either addresses or coordinates can be used).
-    - dimension (string): Dimension of the matrix to generate:
-        - 'time' (default): generates a matrix of travel values (in minutes)
-        - 'distance': generates a matrix of distances (in kilometers)
+    Args:
+        locations (list of str): List of locations (either addresses or coordinates can be used).
+        dimension (string): Dimension of the matrix to generate:
+            - 'time' (default): generates a matrix of travel values (in minutes)
+            - 'distance': generates a matrix of distances (in kilometers)
 
     Returns:
-    - Matrix (list of list of int) of values or distances between each pair of locations.
-        - If a route is not found '-1' is used as a placeholder.
-        - If an error occurs in the API response '-1000' is used as a placeholder.
-
+        Matrix (list of list) of values or distances between each pair of locations.
+            - If a route is not found '-1' is used as a placeholder.
+            - If an error occurs in the API response '-1000' is used as a placeholder.
     '''
-
+    
     # Joining the list into a string for the API request
     origins = "|".join(locations)
     destinations = "|".join(locations)
 
     # API request
     url = f'https://api.distancematrix.ai/maps/api/distancematrix/json?origins={origins}&destinations={destinations}&key={API_KEY}'
-    # Response
-    response = requests.get(url)
-    data = response.json()
 
-    if data['status'] == 'OK':
+    try:
+        # Sending the API request
+        response = requests.get(url)
+        response.raise_for_status()  # Raises HTTPError for bad responses (4XX and 5XX)
+        data = response.json()
 
-        print(data)
+        # Processing the response
+        if data.get('status') != 'OK':
+            raise ValueError(f'API Error: Received response status {data.get("status")}')
 
         matrix = []
 
-        for row in data['rows']:
+        for row in data.get('rows', []):
             values = []
-            for element in row['elements']:
-                if element['status'] == 'OK':
-                    if dimension == 'time': # Generates time matrix 
-                        values.append(round(element['duration']['value'] / 60)) # minutes
-                    elif dimension == 'distance': # Generates distance matrix 
-                        values.append(round(element['distance']['value'] / 1000)) # kilometers
-                elif element['status'] == 'ZERO_RESULTS': # If no routes were found between these two locations (node)...
-                    values.append(-1)
-                else: # If an error occurs while processing this node...
+            for element in row.get('elements', []):
+                try:
+                    if element['status'] == 'OK':
+                        if dimension == 'time':  # Generates time matrix 
+                            values.append(round(element['duration']['value'] / 60))  # minutes
+                        elif dimension == 'distance':  # Generates distance matrix 
+                            values.append(round(element['distance']['value'] / 1000))  # kilometers
+                    elif element['status'] == 'ZERO_RESULTS':  # No routes found
+                        values.append(-1)
+                    else:  # Error in processing node
+                        values.append(-1000)
+                except KeyError as e:
+                    # Handle missing keys in the response
+                    print(f'KeyError: Missing expected key {e} in element.')
                     values.append(-1000)
             matrix.append(values)
 
         return matrix
 
-    else: # If there's an error when trying to connect with the API
-        print(f'ERROR: received response status {data['status']}')
+    except requests.RequestException as e:
+        # Handle any errors that occur during the API request
+        print(f'RequestException: An error occurred while making the API request: {e}')
+        return None
+    except ValueError as e:
+        # Handle errors in the API response
+        print(f'ValueError: {e}')
+        return None
+    except Exception as e:
+        # Handle any other unexpected errors
+        print(f'Unexpected error: {e}')
+        return None
 
+ 
 def print_matrix(matrix):
-    '''Prints the given matrix'''
+    '''
+    Prints the given matrix row by row.
+
+    Args:
+    matrix (list of list)
+    
+    '''
     for row in matrix:
         print(row)

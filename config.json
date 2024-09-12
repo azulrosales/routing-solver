@@ -1,0 +1,16 @@
+{
+    "num_vehicles": ,
+    "starts": [2, 6, 8, 5],
+    "ends": [0, 0, 0, 0],
+    "locations": [
+        "Arzak, Avenida Alcalde Elósegui, 273, 20015 Donostia, Gipuzkoa, Spain",  
+        "Akelarre, Paseo Padre Orcolaga, 56, 20008 Donostia, Gipuzkoa, Spain",  
+        "Mugaritz, Aldura Aldea, 20, 20100 Errenteria, Gipuzkoa, Spain",   
+        "Amelia by Paulo Airaudo, Calle Prim, 34, 20006 Donostia, Gipuzkoa, Spain",   
+        "Narru, Zubieta Kalea, 56, 20007 Donostia, Gipuzkoa, Spain",  
+        "Kokotxa, Calle del Campanario, 11, 20003 Donostia, Gipuzkoa, Spain",
+        "Mapa Verde, Calle Trueba, 4, 20001 Donostia, Gipuzkoa, Spain",
+        "La Cuchara de San Telmo, Calle 31 de Agosto, 28, 20003 Donostia, Gipuzkoa, Spain",
+        "Beti Jai Berria, Calle Fermin Calbeton, 22, 20003 Donostia, Gipuzkoa, Spain"
+    ]
+}
