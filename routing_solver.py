@@ -1,12 +1,21 @@
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
+import warnings
 
-def create_data_model(time_matrix, num_vehicles, starts, ends, break_time=None, break_start_time=None, service_time=15, max_route_time=720, slack_time=10):
+def create_data_model(time_matrix: list[list[int]], 
+                      num_vehicles: int, 
+                      starts: list[int], 
+                      ends: list[int], 
+                      break_time: int | None = None, 
+                      break_start_time: int | None = None, 
+                      service_time: int = 15, 
+                      max_route_time: int = 720, 
+                      slack_time: int = 10) -> dict:
     '''
-    Stores the data for the VRP problem.
+    Validates and constructs the data model for the VRP Solver.
 
     Args:
-        time_matrix (list of list): Matrix where entry [i][j] represents the travel time from location i to j.
+        time_matrix (lists of lists of int): Matrix of size nxn where n is the number of locations, and where entry [i][j] represents the travel time from location i to j.
         num_vehicles (int): The number of vehicles available for the routes.
         starts (list of int): List of start indices for each vehicle.
         ends (list of int): List of end indices for each vehicle.
@@ -17,29 +26,91 @@ def create_data_model(time_matrix, num_vehicles, starts, ends, break_time=None, 
         slack_time (int, optional): Max slack time in minutes. Defaults to 10 min. 
 
     Returns:
-        dict: Data model containing the time matrix, number of vehicles, start and end points, and service times.
+        dict: Data model containing the time matrix, number of vehicles, start and end points, service time, etc.
     '''
+    
+    # Data validaton
+    if not isinstance(time_matrix, list) or not all(isinstance(row, list) for row in time_matrix):
+        raise TypeError('time_matrix must be a list of lists.')
+    
+    if len(time_matrix) != len(time_matrix[0]):
+        raise ValueError('time_matrix must be square (equal number of rows and columns).')
+    
+    if not all(isinstance(i, int) for row in time_matrix for i in row):
+        raise ValueError('All elements of time_matrix must be integers.')
+    
+    if not isinstance(num_vehicles, int) or num_vehicles <= 0:
+        raise ValueError('num_vehicles must be a positive integer.')
+    
+    if not isinstance(starts, list) or not all(isinstance(i, int) for i in starts) or len(starts) != num_vehicles: 
+        raise ValueError(f'starts must be a list of {num_vehicles} integers.')
+    
+    if not isinstance(ends, list) or not all(isinstance(i, int) for i in ends) or len(ends) != num_vehicles: 
+        raise ValueError(f'ends must be a list of {num_vehicles} integers.')
+    
+    if not all(0 <= i < len(time_matrix) for i in starts):
+        raise ValueError('start index out of range.')
+    
+    if not all(0 <= i < len(time_matrix) for i in ends):
+        raise ValueError('end index out of range.')
 
-    data = {}
-    data['matrix'] = time_matrix
-    data['num_vehicles'] = num_vehicles 
-    data['starts'] = starts 
-    data['ends'] = ends 
-    data['break_time'] = break_time 
-    data['break_start_time'] = break_start_time 
-    data['service_time'] = [service_time] * len(data['matrix'])
-    data['max_route_time'] = max_route_time
-    data['slack_time'] = slack_time
+    if break_time is not None:
+        if not isinstance(break_time, int) or break_time < 0:
+            raise ValueError('break_time must be a non-negative integer.')
+        if break_time >= max_route_time:
+            warnings.warn('break_time should be less than max_route_time.')
+    
+    if break_start_time is not None:
+        if not isinstance(break_start_time, int) or break_start_time < 0:
+            raise ValueError('break_start_time must be a non-negative integer.')
+        if break_start_time >= max_route_time:
+            warnings.warn('break_start_time should be less than max_route_time.')
+    
+    if not isinstance(service_time, int) or service_time < 0:
+        raise ValueError('service_time must be a non-negative integer.')
+    
+    if not isinstance(max_route_time, int) or max_route_time <= 0:
+        raise ValueError('max_route_time must be a positive integer.')
+    
+    if not isinstance(slack_time, int) or slack_time < 0:
+        raise ValueError('slack_time must be a non-negative integer.')
+    
+    data = {
+        'matrix': time_matrix,
+        'num_vehicles': num_vehicles,
+        'starts': starts,
+        'ends': ends,
+        'break_time': break_time,
+        'break_start_time': break_start_time,
+        'service_time': [service_time] * len(time_matrix),
+        'max_route_time': max_route_time,
+        'slack_time': slack_time
+    }
 
     return data
 
 
-def vrp_solver(data):
+def vrp_solver(data: dict) -> None:
     '''
-    Solves the VRP problem using the OR-Tools library.
+    Solves a Vehicle Routing Problem (VRP) with time constraints, where vehicles can have different start and/or end points and break times. 
+    The objective is to minimize the total travel time while considering travel times, service times at each location, and breaks for each vehicle.
 
     Args:
-        data (dict): Data model containing the time matrix, number of vehicles, start and end points, and service time.
+        data (dict): Data model containing the time matrix, number of vehicles, start and end points, and optional parameters for breaks, service time, max route time, and slack time.
+            Must include:
+                - 'matrix': Time matrix (list of lists of int)
+                - 'num_vehicles': Number of vehicles (int)
+                - 'starts': List of start indices for each vehicle (list of int)
+                - 'ends': List of end indices for each vehicle (list of int)
+            Optional:
+                - 'break_time': Duration of the break in minutes (int or None)
+                - 'break_start_time': Time the break should start in minutes (int or None)
+                - 'service_time': Service time at each location in minutes (int, default 15)
+                - 'max_route_time': Max total time allowed for the completion of the route in minutes (int, default 720)
+                - 'slack_time': Max slack time in minutes (int, default 10)
+
+    Returns:
+        None: The function prints the solution to the VRP problem or a message if no solution is found.
     '''
 
     # Routing Index Manager
@@ -51,7 +122,7 @@ def vrp_solver(data):
     # Routing Model
     routing = pywrapcp.RoutingModel(manager)
 
-    def time_callback(from_index, to_index):
+    def time_callback(from_index: int, to_index: int) -> int:
         '''Returns the travel time + service time between two nodes'''
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
@@ -74,7 +145,7 @@ def vrp_solver(data):
     time_dimension.SetGlobalSpanCostCoefficient(10)
 
     # Adding breaks
-    if data['break_time'] is not None and data['break_start_time'] is not None:
+    if data.get('break_time') is not None and data.get('break_start_time') is not None:
         node_visit_transit = [0] * routing.Size()
         for index in range(routing.Size()):
             node = manager.IndexToNode(index)
@@ -114,26 +185,38 @@ def vrp_solver(data):
         print('No solution found :(')
 
 
-def print_solution(manager, routing, solution):
+def print_solution(manager: pywrapcp.RoutingIndexManager, routing: pywrapcp.RoutingModel, solution: pywrapcp.Assignment) -> None:
     '''
     Prints the solution to the VRP problem.
+        - The function prints information about any breaks scheduled for vehicles, including start time and duration.
+        - For each vehicle, it prints the route taken, including the time at each node and the total route time.
+        - It also prints the total time of all routes combined.
 
     Args:
-        manager (pywrapcp.RoutingIndexManager): Routing index manager used for mapping between nodes and indices.
-        routing (pywrapcp.RoutingModel): Routing model instance used to solve the problem.
+        manager (pywrapcp.RoutingIndexManager): RoutingIndexManager used for mapping between nodes and indices.
+        routing (pywrapcp.RoutingModel): RoutingModel instance used to solve the problem.
         solution (pywrapcp.Assignment): Solution returned by the solver.
+
+    Returns:
+        None: The function prints the routes and break details to the console.
     '''
 
-    print('Breaks:')
+    # Extracting breaks information from the solution
     intervals = solution.IntervalVarContainer()
-    for i in range(intervals.Size()):
-        brk = intervals.Element(i)
-        if brk.PerformedValue():
-            print(f'{brk.Var().Name()}: ' +
-                  f'Start({brk.StartValue()}) Duration({brk.DurationValue()})')
-        else:
-            print(f'{brk.Var().Name()}: Unperformed')
+    has_breaks = any(intervals.Element(i).PerformedValue() for i in range(intervals.Size()))
 
+    # Print break information
+    if has_breaks:
+        print('\n Breaks:')
+        for i in range(intervals.Size()):
+            brk = intervals.Element(i)
+            if brk.PerformedValue():
+                print(f'{brk.Var().Name()}: ' + f'Start({brk.StartValue()}) Duration({brk.DurationValue()})')
+            else:
+                print(f'{brk.Var().Name()}: Unperformed')
+        print('\n')
+
+    # Print route information 
     time_dimension = routing.GetDimensionOrDie('Time')
     total_time = 0
     for vehicle_id in range(manager.GetNumberOfVehicles()):

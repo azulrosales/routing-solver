@@ -1,7 +1,7 @@
 {
-    "num_vehicles": ,
-    "starts": [2, 6, 8, 5],
-    "ends": [0, 0, 0, 0],
+    "num_vehicles": 3,
+    "starts": [0, 1, 1],
+    "ends": [0, 0, 1],
     "locations": [
         "Arzak, Avenida Alcalde Elósegui, 273, 20015 Donostia, Gipuzkoa, Spain",  
         "Akelarre, Paseo Padre Orcolaga, 56, 20008 Donostia, Gipuzkoa, Spain",  
